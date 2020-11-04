@@ -3,12 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <link rel="stylesheet" href="css.css">
+    <script type="text/javascript" src="js.js" defer></script>
     <title>Title</title>
 </head>
 <body>
-<button id = "clear" type="button">clear</button>
-<button id = "result" type="button">result</button>
+<h1>Neural Network Front end for Handwritten number</h1>
 <canvas id="input" class = "canvas" width = "560" height = "560"></canvas>
-<script type="text/javascript" src="js.js"></script>
+<p>Expected number : </p>
+<p id = "expect">Draw something...</p>
+<p>If your browser is not fast enough to get result fast, use Slow mode!</p>
+<label for="slowMode">Slow mode</label>
+<input type="checkbox" id="slowMode">
+<br><button id = "clear" type="button">Clear</button>
+<button id = "result" type="button" disabled="disabled">Result</button>
 </body>
 </html>
