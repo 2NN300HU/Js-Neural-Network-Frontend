@@ -9,10 +9,11 @@ let temp2 = new Array(10);
 let isDrawing = false;
 
 let isSlowMode = false;
+const canvasSize = 560;
 
 document.getElementById("clear").addEventListener("click", clear);
 const resultButton = document.getElementById("result");
-resultButton.addEventListener("click",feed);
+resultButton.addEventListener("click", expectNumber);
 const slowModeCheckBox = document.getElementById("slowMode");
 slowModeCheckBox.addEventListener("click", slowMode);
 const expect = document.getElementById("expect");
@@ -59,60 +60,129 @@ function onMouseUp() {
     isDrawing = false;
 }
 
-function slowMode(){
-    if(slowModeCheckBox.checked){
+function slowMode() {
+    if (slowModeCheckBox.checked) {
         isSlowMode = true;
         resultButton.disabled = false;
-    }else{
+    } else {
         isSlowMode = false;
         resultButton.disabled = true;
     }
 }
 
-function feed() {
-    let pixel = ctx.getImageData(0, 0, 560, 560);
-    input.fill(0, 0, 784);
-    for (let i = 0; i < 560; i++) {
-        for (let j = 0; j < 560 * 4; j += 4) {
-            input[Math.floor(i / 20) * 28 + Math.floor(j / 80)] += Math.floor(pixel.data[i * 560 * 4 + j] / 255);
-        }
-    }
-    for (let i = 0; i <784; i++){
-        input[i] /=400
-    }
+function foward() {
     temp1.fill(0, 0, 300);
-    for (let i = 0 ; i < 300; i++){
-        for(let j = 0 ; j < 784; j++){
-            temp1[i]+= weight1[j * 300 + i] * input [j];
+    for (let i = 0; i < 300; i++) {
+        for (let j = 0; j < 784; j++) {
+            temp1[i] += weight1[j * 300 + i] * input [j];
         }
         temp1[i] += bias1[i];
     }
-    for (let i = 0; i <300; i++){
-        if(temp1[i]<0){
+    for (let i = 0; i < 300; i++) {
+        if (temp1[i] < 0) {
             temp1[i] = 0;
         }
     }
-    temp2.fill(0,0,10);
-    for (let i = 0 ; i < 10; i++){
-        for(let j = 0 ; j < 300; j++){
-            temp2[i]+= weight2[j * 10 + i] * temp1 [j];
+    temp2.fill(0, 0, 10);
+    for (let i = 0; i < 10; i++) {
+        for (let j = 0; j < 300; j++) {
+            temp2[i] += weight2[j * 10 + i] * temp1 [j];
         }
         temp2[i] += bias2[i];
     }
     let maxLabel = 0;
     let max = temp2[0];
-    for (let i = 1; i <10; i++){
-        if (max < temp2[i]){
+    for (let i = 1; i < 10; i++) {
+        if (max < temp2[i]) {
             maxLabel = i;
             max = temp2[i];
         }
     }
-    expect.innerText = String(maxLabel);
+    return maxLabel
+}
+function isRowEmpty(pixel,y){
+    if(y >=canvasSize){
+        return false;
+    }
+    for (let i = 0 ;i<canvasSize; i ++ ){
+        if(pixel.data[4*(y*canvasSize+i)] !== 0){
+            return false
+        }
+    }
+    return true
+}
+
+
+function isColumnEmpty(pixel,x){
+    if(x >=canvasSize){
+        return false;
+    }
+    for (let i = 0 ;i<canvasSize; i ++ ){
+        if(pixel.data[4*(i*canvasSize+x)] !== 0){
+            return false
+        }
+    }
+    return true
+}
+function feed() {
+    let pixel = ctx.getImageData(0, 0, canvasSize, canvasSize);
+    let leftMargin = 0, rightMargin = 0, upperMargin = 0, underMargin = 0;
+    while (isColumnEmpty(pixel, leftMargin)){
+        leftMargin++;
+    }
+    if(leftMargin===canvasSize){
+        return false;
+    }
+    while (isColumnEmpty(pixel,canvasSize - rightMargin-1)){
+        rightMargin++;
+    }
+    while (isRowEmpty(pixel, upperMargin)){
+        upperMargin++;
+    }
+    while (isRowEmpty(pixel,canvasSize - underMargin-1)){
+        underMargin++;
+    }
+
+    let objectSize = parseInt((Math.max(canvasSize-leftMargin-rightMargin, canvasSize-underMargin-upperMargin)-1)/28)*28+28
+    let temp = objectSize + leftMargin+ rightMargin - canvasSize;
+    leftMargin -= parseInt(temp/2)
+    rightMargin -= temp - parseInt(temp/2)
+    temp = objectSize + upperMargin+ underMargin - canvasSize;
+    upperMargin -= parseInt(temp/2)
+    underMargin -= temp - parseInt(temp/2)
+
+    if (leftMargin < 0 ){
+        leftMargin =0;
+    }else if (rightMargin<0){
+        leftMargin+=rightMargin
+    }
+    if(upperMargin<0){
+        upperMargin = 0;
+    }else if (underMargin <0){
+        upperMargin+=underMargin;
+    }
+    let blockSize = objectSize/28
+    input.fill(0, 0, 784);
+    for (let i = 0; i <objectSize; i++) {
+        for (let j = 0; j <objectSize ; j ++) {
+            input[Math.floor(i / blockSize) * 28 + Math.floor(j / blockSize)] += Math.floor(pixel.data[((i+upperMargin) * canvasSize + j+leftMargin)*4] / 255);
+        }
+    }
+    for (let i = 0; i < 784; i++) {
+        input[i] /= blockSize*blockSize
+    }
+    return true;
+}
+
+function expectNumber() {
+    if(feed()){
+        expect.innerText = String(foward());
+    }
 }
 
 function clear() {
     ctx.fillStyle = "black";
-    ctx.fillRect(0, 0, 560, 560);
+    ctx.fillRect(0, 0, canvasSize, canvasSize);
 }
 
 function onMouseMove(e) {
@@ -120,11 +190,11 @@ function onMouseMove(e) {
     let y = e.offsetY;
     if (isDrawing) {
         ctx.beginPath();
-        ctx.arc(x - 20, y - 20, 40, 0, Math.PI * 2);
+        ctx.arc(x - 20, y - 20, 30, 0, Math.PI * 2);
         ctx.fillStyle = "white";
         ctx.fill();
-        if (!isSlowMode){
-            feed();
+        if (!isSlowMode) {
+            expectNumber();
         }
     }
 }
