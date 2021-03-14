@@ -18,7 +18,7 @@ const slowModeCheckBox = document.getElementById("slowMode");
 slowModeCheckBox.addEventListener("click", slowMode);
 const expect = document.getElementById("expect");
 const canvas = document.getElementById("input");
-ctx = canvas.getContext("2d");
+const ctx = canvas.getContext("2d");
 clear();
 
 let req = new XMLHttpRequest();
